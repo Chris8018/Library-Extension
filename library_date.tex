@@ -1,0 +1,163 @@
+\documentclass[12pt,a4paper]{article}
+\title{CI311 - Extending the formal model for the Library System}
+\author{Trieu Vi Tran - 15800120}
+\date{28/02/2019}
+
+\usepackage{oofs}
+
+\addtolength{\textheight}{10ex}
+
+\setlength{\unitlength}{1mm} % for pictures
+
+\renewcommand{\thefootnote}{\fnsymbol{footnote}} % symbols
+
+\begin{document}\maketitle
+
+\subsubsection*{Date Library Class: $\i{LD}$}
+
+A Date library system \i{extends} the Simple Library system to provide due date for \i{loan} and expire date for \i{reserve}. Each title in the system has a loan type, either a standard loan or a long-term loan.
+\begin{showspecs}
+	\begin{spec}{\i{LD}}
+		\i{LS}\\
+		\i{currentDate} : \p{DATE}\\
+        \i{LoanPeriod} : \p{POS}\\
+        \i{LoanPeriod} = \{\i{standardLoan, longtermLoan}\}\\
+        \i{loanType} : \i{Title} \to \i{LoanPeriod}\\
+        \i{reservePeriod} : \p{POS}\\
+		\i{dueDate}: \i{loan} \tfun \p{DATE}\\
+		\i{expDate}: \i{reserve} \tfun \p{DATE}
+		\post
+		\i{currentDate'} = \p{TODAY}\\
+        \i{standardLoan'} = 7\\
+        \i{longtermLoan'} = 28\\
+        \i{resevePeriod'} = 7
+	\end{spec}
+\end{showspecs}
+
+\newpage
+\subsubsection*{Daily operation}
+
+\noindent This event will move the system's current date, currentDate, to the next date and filter all of the expired reservation.
+\begin{showspecs}
+    \begin{spec}{\i{LD!NextDate()}}
+            \post
+            \i{currentDate'} = \i{currentDate} + 1\\
+            \i{reserve'} = \{r: \i{reserve}\, \bullet \i{expDate(r)} \ge \i{currentDate'}\}\\
+            \forall t: \i{Title}\, \bullet\\
+            \hspace{0.5cm}\i{requestQ'(t)} = \{m: \i{Member}\, \bullet\\
+            \hspace{4cm}m\in \p{cod}\,\i{requestQ}(t)\,\wedge\\
+            \hspace{4cm}\i{expDate(t \mapsto m)} \ge \i{currentDate'}\}\\
+            \hspace{0.5cm}\i{nQ}(t) = \#\i{requestQ'}(t)
+    \end{spec}
+\end{showspecs}
+
+\subsubsection*{Queries}
+
+\noindent Most required queries inherit from \i{LS}:
+\begin{showspecs}
+	\begin{spec}{\i{LD?showInfo(m \to i)}}
+		\i{LS?showInfo(m \to i)}
+	\end{spec}
+	\showbeside
+	\begin{spec}{\i{LD?showMembers(\to M)}}
+		\i{LS?showMembers(\to M)}
+	\end{spec}
+	\showmore
+	\begin{spec}{\i{LD?showDesc(t \to d)}}
+		\i{LS?showDesc(t \to d)}
+	\end{spec}
+	\showbeside
+	\begin{spec}{\i{LD?showNoCopies(t \to n)}}
+		\i{LS?showNoCopies(t \to n)}
+	\end{spec}
+	\showmore
+	\begin{spec}{\i{LD?showLoans(t \to M)}}
+		\i{LS?showLoans(t \to M)}
+	\end{spec}
+	\showbeside
+	\begin{spec}{\i{LD?showRequests(t \to Q)}}
+		\i{LS?showRequests(t \to Q)}
+	\end{spec}
+    
+\end{showspecs}
+
+\bigskip\noindent \i{showCollection} is updated to include the loan type of each title.
+\begin{showspecs}
+    \begin{spec}{\i{LD?showCollection(\to C)}}
+        C: \i{Title}\pfun\p{POS}\times\p{NAT}\times\p{NAT}\times\g{D}\\
+        C\!=\{(t,n,l,q,lt,d):\i{InColl}\times\p{POS}\times\p{NAT}\times\p{NAT}\times\i{LoanPeriod}\times\g{D}\bullet\\
+        \hspace{1cm} n = \i{nc}(t)\wedge l = \i{nl}(t)\wedge q = \i{nQ}(t)\wedge lt = \i{loanType(t)}\wedge d = \i{desc}(t)\}
+    \end{spec}
+\end{showspecs}
+
+\bigskip\noindent The set of overdue loan, l, can be shown with its due date.
+\begin{showspecs}
+    \begin{spec}{\i{LD?showOverdue(\to O)}}
+        \i{O}: \i{loan}\pfun\p{DATE}\\
+        \i{O} = \{(l, d): \i{loan}\times \p{DATE}\, \bullet\\
+        \hspace{1cm} d = \i{dueDate}(l)\,\wedge d < currentDate\}
+    \end{spec}
+\end{showspecs}
+
+\newpage
+\subsubsection*{Events}
+
+\noindent Most events inherit from \i{LS}:
+\begin{showspecs}
+	\begin{spec}{\i{LD!NewMember(i \to m)}}
+		\i{LS!NewMember(i \to m)}
+	\end{spec}
+	\showbeside
+	\begin{spec}{\i{LD!UpdateInfo(m,i)}}
+		\i{LS!UpdateInfo(m,i)}
+	\end{spec}
+	\showmore
+	\begin{spec}{\i{LD!AddCopies(t,n)}}	
+		\i{LS!AddCopies(t,n)}
+	\end{spec}
+	\showbeside
+	\begin{spec}{\i{LD!RemoveCopy(t)}}	
+		\i{LS!RemoveCopy(t)}
+	\end{spec}
+    \showmore
+    \begin{spec}{\i{LD!Cancel(t,m \to p)}}
+        \i{LS!Cancel(t,m \to p)}
+    \end{spec}
+    \showbeside
+    \begin{spec}{\i{LD!Return(t,m)}}
+        \i{LS!Return(t,m)}
+    \end{spec}
+\end{showspecs}
+
+\bigskip\noindent \i{NewTitle} is updated to add loan type, \i{lt}, to the title, \i{t}.
+\begin{showspecs}
+    \begin{spec}{\i{LD!NewTitle(d, lp \to t)}}
+		\i{LS!NewTitle(d \to t)}\\
+        lp \in \i{LoanPeriod}\\
+        lp \ne \i{loanType(t)}
+        \post
+        \i{loanType'(t)} = lp
+	\end{spec}
+\end{showspecs}
+
+\bigskip\noindent \i{Reserve} is updated to add expire date to the reservation, \i{r}.
+\begin{showspecs}
+	\begin{spec}{\i{LD!Reserve(t,m \to p)}}
+		\i{LS!Reserve(t,m \to p)}\\
+        r := t\mapsto m\in \i{reserve}
+        \post
+        \i{expDate'(r)} = \i{currentDate} + \i{reservePeriod}
+	\end{spec}
+\end{showspecs}
+
+\bigskip\noindent \i{LoanCopy} is updated to add due date to the loan, \i{l}.
+\begin{showspecs}
+	\begin{spec}{\i{LD!LoanCopy(t,m)}}
+		\i{LS!LoanCopy(t,m)}\\
+        l := t\mapsto m\in \i{loan}
+        \post
+        \i{dueDate'(l)} = \i{currentDate} + \i{loanType(t)}
+	\end{spec}
+\end{showspecs}
+
+\end{document} 
